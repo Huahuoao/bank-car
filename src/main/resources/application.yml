@@ -1,0 +1,45 @@
+server:
+  port: 51608
+spring:
+  servlet:
+    multipart:
+      max-request-size: 500MB
+      max-file-size: 500MB
+  application:
+    name: huahuo-bank
+  cache:
+    redis:
+      time-to-live: 1800000
+  datasource:
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://tycloud.fzuhuahuo.cn:3308/huahuo_car?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+      username: root
+      password: 20030416cjh
+#
+#  redis:
+#    host: tycloud.fzuhuahuo.cn
+#    port: 6379
+#    #password: 123456
+#    database: 0 #????0????
+#    jedis:
+#      #Redis?????
+#      pool:
+#        max-active: 8 #?????
+#        max-wait: 1ms #???????????
+#        max-idle: 4 #???????????
+#        min-idle: 0 #???????????
+
+minio:
+  endpoint: http://tycloud.fzuhuahuo.cn:9000
+  accessKey: admin
+  secretKey: admin123456
+  bucketName: test
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: ASSIGN_ID
+
