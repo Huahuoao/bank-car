@@ -1,19 +1,18 @@
 package com.huahuo.huahuobank.dto;
 
+import io.swagger.models.auth.In;
 import lombok.Data;
-
-import java.io.Serializable;
 
 /**
  * @作者 花火
- * @创建日期 2023/1/31 1:50
+ * @创建日期 2023/2/7 0:10
  */
 @Data
-public class ListPageDto extends PageRequestDto implements Serializable {
+public class ListPageThreeDto  extends PageRequestDto{
     Integer userId;
-    Integer type;
+    String keyword;
     String group;
-    String keyWord;
     Integer orderByPrice;
     Integer orderByPriceType;
+    Integer manageWay;
 }

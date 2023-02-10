@@ -70,7 +70,7 @@ public class ExcelController {
 
     @PostMapping("/download")
     public void upload(HttpServletResponse response) throws IOException {
-        List<TaskDetail> list = taskDetailMapper.SelectAll();
+        List<Task> list = taskService.list();
         WriteCellStyle headWriteCellStyle = new WriteCellStyle();
         WriteFont headWriteFont = new WriteFont();
         headWriteFont.setFontHeightInPoints((short) 13);
@@ -91,7 +91,7 @@ public class ExcelController {
         // 这里URLEncoder.encode可以防止中文乱码
         String excelName = URLEncoder.encode("任务发布清单", "UTF-8");
         response.setHeader("Content-disposition", "attachment;filename=" + excelName + ExcelTypeEnum.XLSX.getValue());
-        EasyExcel.write(response.getOutputStream(), TaskDetail.class).registerWriteHandler(horizontalCellStyleStrategy)
+        EasyExcel.write(response.getOutputStream(), Task.class).registerWriteHandler(horizontalCellStyleStrategy)
                 .sheet("任务发布清单")
                 .doWrite(list);  //list就是存储的数据
     }
