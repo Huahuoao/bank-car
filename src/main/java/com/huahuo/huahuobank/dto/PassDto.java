@@ -2,15 +2,13 @@ package com.huahuo.huahuobank.dto;
 
 import lombok.Data;
 
-import java.io.Serializable;
-
 /**
  * @作者 花火
- * @创建日期 2023/1/31 1:14
+ * @创建日期 2023/2/4 16:27
  */
 @Data
-public class DownloadUrlsDto implements Serializable {
+public class PassDto {
+    Integer userId;
     Integer taskId;
     Integer type;
-
 }

@@ -1,6 +1,14 @@
 server:
   port: 51608
+
+  ssl:
+    key-store: classpath:server.jks
+    key-store-password: 3fsh8f6kts
+    key-store-type: JKS
+
 spring:
+  jackson:
+    time-zone: GMT+8
   servlet:
     multipart:
       max-request-size: 500MB
@@ -13,9 +21,10 @@ spring:
   datasource:
     druid:
       driver-class-name: com.mysql.cj.jdbc.Driver
-      url: jdbc:mysql://tycloud.fzuhuahuo.cn:3308/huahuo_car?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+      url: jdbc:mysql://tycloud.fzuhuahuo.cn:3306/huahuo_car?serverTimezone=Asia/Shanghai&useSSL=false&useUnicode=true&characterEncoding=UTF8
       username: root
-      password: 20030416cjh
+      password: 123456
+
 #
 #  redis:
 #    host: tycloud.fzuhuahuo.cn
@@ -30,11 +39,6 @@ spring:
 #        max-idle: 4 #???????????
 #        min-idle: 0 #???????????
 
-minio:
-  endpoint: http://tycloud.fzuhuahuo.cn:9000
-  accessKey: admin
-  secretKey: admin123456
-  bucketName: test
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true

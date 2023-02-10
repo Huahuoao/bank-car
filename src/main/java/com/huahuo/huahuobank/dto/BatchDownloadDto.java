@@ -1,16 +1,14 @@
 package com.huahuo.huahuobank.dto;
 
+import io.swagger.models.auth.In;
 import lombok.Data;
-
-import java.io.Serializable;
 
 /**
  * @作者 花火
- * @创建日期 2023/1/31 1:14
+ * @创建日期 2023/2/2 21:41
  */
 @Data
-public class DownloadUrlsDto implements Serializable {
+public class BatchDownloadDto {
     Integer taskId;
     Integer type;
-
 }

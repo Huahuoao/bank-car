@@ -6,7 +6,7 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
-@ComponentScan(basePackages = "com.huahuo.huahuobook") //全局异常处理类需要被扫描才能
+@ComponentScan(basePackages = "com.huahuo.huahuobank") //全局异常处理类需要被扫描才能
 public class WebMvcConfig implements WebMvcConfigurer {
     /**
      * 注册自定义拦截器
@@ -16,11 +16,12 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new UserLoginInterceptor())
-                .addPathPatterns("/**")
+                .addPathPatterns("/api/1/**")
+                .excludePathPatterns("/io")
                 .excludePathPatterns("/user/login")
                 .excludePathPatterns("/upload/**")
                 .excludePathPatterns("/user/register")
-                .excludePathPatterns("/io/**");
+               ;
 
     }
 
