@@ -23,7 +23,7 @@ spring:
       driver-class-name: com.mysql.cj.jdbc.Driver
       url: jdbc:mysql://tycloud.fzuhuahuo.cn:3306/huahuo_car?serverTimezone=Asia/Shanghai&useSSL=false&useUnicode=true&characterEncoding=UTF8
       username: root
-      password: 123456
+      password: RaguwwC9KZufTfU
 
 #
 #  redis:

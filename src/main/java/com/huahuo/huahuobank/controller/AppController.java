@@ -1,6 +1,11 @@
 package com.huahuo.huahuobank.controller;
 
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.http.HttpRequest;
+import cn.hutool.http.HttpResponse;
+import cn.hutool.http.HttpUtil;
+import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huahuo.huahuobank.common.ResponseResult;
 import com.huahuo.huahuobank.dto.*;
@@ -21,7 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.net.URLDecoder;
+import java.time.LocalDateTime;
 import java.util.*;
 
 
@@ -155,6 +160,7 @@ public class AppController {
         log.info("3");
         taskDetailService.updateById(task);
         log.info("4");
+        send();
         return ResponseResult.okResult("成功提交第一次审核");
     }
 
@@ -167,6 +173,7 @@ public class AppController {
         task.setSecondSubUser(user.getNickname());
         task.setSecondSubTime(DateUtil.now());
         taskDetailService.updateById(task);
+        send();
         return ResponseResult.okResult("成功提交第二次审核");
     }
 
@@ -442,6 +449,25 @@ public class AppController {
                     materials.setIsNew(0);
                     materialsService.updateById(materials);
                 }
+                task.setTaskGroup(null);
+                if (task.getIsRemarkOne() == 4 || task.getIsRemarkTwo() == 4) {
+                    //删除record
+                    LambdaQueryWrapper<Record> queryWrapper4 = new LambdaQueryWrapper<>();
+                    queryWrapper4.eq(Record::getTaskId, task.getId());
+                    recordService.remove(queryWrapper4);
+                    task.setIsRemarkOne(0);
+                    task.setIsRemarkTwo(1);
+                }
+                //待审核变成未提交
+                if (task.getIsRemarkOne() == 3 || task.getIsRemarkTwo() == 3) {
+                    //materials
+                    task.setIsRemarkOne(0);
+                    task.setIsRemarkTwo(1);
+                    LambdaQueryWrapper<Materials> queryWrapper5 = new LambdaQueryWrapper<>();
+                    queryWrapper5.eq(Materials::getTaskId, task.getId());
+                    queryWrapper5.in(Materials::getType, 1, 2);
+                    materialsService.remove(queryWrapper5);
+                }
                 manageDetail = manageDetailService.getOne(queryWrapper);
                 manageDetail.setIsClear(1);
                 task.setIsClear(3); //分期中
@@ -592,6 +618,30 @@ public class AppController {
     public ResponseResult changeGroup(@RequestBody ChangeGroupDto dto) {
         TaskDetail taskDetail = taskDetailService.getById(dto.getTaskId());
         taskDetail.setTaskGroup(dto.getName());
+        Integer id = taskDetail.getId();
+        if (dto.getName().isEmpty()) {
+            //驳回搞掉
+            if (taskDetail.getIsRemarkOne() == 4 || taskDetail.getIsRemarkTwo() == 4) {
+                //删除record
+                LambdaQueryWrapper<Record> queryWrapper = new LambdaQueryWrapper<>();
+                queryWrapper.eq(Record::getTaskId, id);
+                recordService.remove(queryWrapper);
+                taskDetail.setIsRemarkOne(0);
+                taskDetail.setIsRemarkTwo(1);
+            }
+            //待审核变成未提交
+            if (taskDetail.getIsRemarkOne() == 3 || taskDetail.getIsRemarkTwo() == 3) {
+                //materials
+                taskDetail.setIsRemarkOne(0);
+                taskDetail.setIsRemarkTwo(1);
+                LambdaQueryWrapper<Materials> queryWrapper = new LambdaQueryWrapper<>();
+                queryWrapper.eq(Materials::getTaskId, id);
+                queryWrapper.in(Materials::getType, 1, 2);
+                materialsService.remove(queryWrapper);
+            }
+
+
+        }
         taskDetailService.updateById(taskDetail);
         return ResponseResult.okResult("更改成功！");
 
@@ -616,9 +666,117 @@ public class AppController {
         List<TaskDetail> list = taskDetailService.list();
         Integer sum = 0;
         for (TaskDetail taskDetail : list) {
-            if (taskDetail.getGpsSituation().equals("未贴G")&&!taskDetail.getCarSituation().equals("已处置")) ;
+            if (taskDetail.getGpsSituation().equals("未贴G") && !taskDetail.getCarSituation().equals("已处置")) ;
             sum++;
         }
         return sum;
     }
+
+    @PostMapping("/change/group/2")
+    public ResponseResult changeBatchGroup(@RequestBody ChangeGroupTwoDto dto) {
+        Integer[] ids = dto.getIds();
+
+        LambdaQueryWrapper<TaskDetail> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.in(TaskDetail::getId, ids);
+        List<TaskDetail> tasks = taskDetailService.list(queryWrapper);
+        for (TaskDetail taskDetail : tasks) {
+            if (taskDetail.getIsRemarkOne() == 4 || taskDetail.getIsRemarkTwo() == 4) {
+                //删除record
+                LambdaQueryWrapper<Record> queryWrapper2 = new LambdaQueryWrapper<>();
+                queryWrapper2.eq(Record::getTaskId, taskDetail.getId());
+                recordService.remove(queryWrapper2);
+                taskDetail.setIsRemarkOne(0);
+                taskDetail.setIsRemarkTwo(1);
+            }
+            //待审核变成未提交
+            if (taskDetail.getIsRemarkOne() == 3 || taskDetail.getIsRemarkTwo() == 3) {
+                //materials
+                taskDetail.setIsRemarkOne(0);
+                taskDetail.setIsRemarkTwo(1);
+                LambdaQueryWrapper<Materials> queryWrapper3 = new LambdaQueryWrapper<>();
+                queryWrapper3.eq(Materials::getTaskId, taskDetail.getId());
+                queryWrapper3.in(Materials::getType, 1, 2);
+                materialsService.remove(queryWrapper3);
+            }
+        }
+        List<TaskDetail> list = taskDetailService.list(queryWrapper);
+        List<Hgroups> groups = groupsService.list();
+        boolean has = false;
+        for (Hgroups group : groups) {
+            if (group.getName().equals(dto.getName())) {
+                has = true;
+                break;
+            }
+        }
+        if (!has) {
+            return ResponseResult.errorResult("队伍不存在");
+        }
+        for (TaskDetail taskDetail : list) {
+            taskDetail.setTaskGroup(dto.getName());
+        }
+        taskDetailService.updateBatchById(list);
+        return ResponseResult.okResult("更改队伍成功,队伍更改为" + dto.getName());
+    }
+
+    public String getAccessToken() {
+        String appId = "wxa3a65dedbd291f1d";
+        String appSecret = "2c9b92bcd7a2f44f3682c9cebec5da3a";
+        String result = cn.hutool.http.HttpUtil.get("https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=" + appId + "&secret=" + appSecret);
+        cn.hutool.json.JSONObject jsonObject = JSONUtil.parseObj(result);
+        return jsonObject.getStr("access_token");
+    }
+
+    @PostMapping("/save/open/id")
+    public ResponseResult saveOpenId(@RequestBody OpenIdDto dto) {
+        String appId = "wxa3a65dedbd291f1d";
+        String secret = "2c9b92bcd7a2f44f3682c9cebec5da3a";
+        String url = "https://api.weixin.qq.com/sns/jscode2session?appid=" + appId + "&secret=" + secret + "&js_code=" + dto.getCode() + "&grant_type=authorization_code";
+        Map<String, Object> paramMap = new HashMap<>();  //map中带不带参数都可以这样用
+        HttpResponse httpResponse = HttpRequest.get(url).form(paramMap).timeout(100000).execute();
+        int status = httpResponse.getStatus();
+        JSONObject arr = JSONObject.parseObject(httpResponse.body());
+        String openId = arr.getString("openid");
+        log.info(httpResponse.body());
+        log.info("openid" + openId);
+        if (openId == null) {
+            return
+                    ResponseResult.errorResult(arr.getString("errmsg"));
+        }
+        User user = userService.getById(dto.getUserId());
+        user.setOpenId(openId);
+        userService.updateById(user);
+        return ResponseResult.okResult("操作成功");
+    }
+
+
+    @PostMapping("/delete/projects")
+    public ResponseResult deleteProjects(@RequestParam String name) {
+        LambdaQueryWrapper<TaskDetail> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(TaskDetail::getProjectName, name);
+        taskDetailService.remove(queryWrapper);
+        return ResponseResult.okResult("删除成功");
+
+    }
+
+    public void send() {
+        String text = "审核通知";
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(User::getLevel, 2);
+        List<User> list = userService.list(queryWrapper);
+        String openid = null;
+        for (User user : list) {
+            openid = user.getOpenId();
+            cn.hutool.json.JSONObject body = new cn.hutool.json.JSONObject();
+            body.set("touser", openid);
+            body.set("template_id", "CeOn6aZx5kKt0o1YADNQBYCLTHmoujFriEbpeDqzVPw");
+            cn.hutool.json.JSONObject json = new cn.hutool.json.JSONObject();
+            json.set("phrase1", new cn.hutool.json.JSONObject().set("value", text));
+            json.set("date3", new cn.hutool.json.JSONObject().set("value", DateUtil.now()));
+            body.set("data", json);
+            String accessToken = getAccessToken();
+            String post = HttpUtil.post("https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=" + accessToken, body.toString());
+            log.info(post);
+        }
+    }
+
 }

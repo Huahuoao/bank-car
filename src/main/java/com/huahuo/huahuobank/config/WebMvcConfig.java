@@ -21,7 +21,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .excludePathPatterns("/user/login")
                 .excludePathPatterns("/upload/**")
                 .excludePathPatterns("/user/register")
-               ;
+                .excludePathPatterns("/api/1/save/open/id")
+        ;
 
     }
 
