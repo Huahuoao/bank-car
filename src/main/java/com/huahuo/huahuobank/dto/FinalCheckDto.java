@@ -17,4 +17,6 @@ public class FinalCheckDto extends CheckDto {
     Integer hasKey;
     String carConditionDes;
     String itemsInCarDes;
+    Double longitude;
+    Double latitude;
 }

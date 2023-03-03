@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
@@ -120,6 +121,29 @@ public class AppController {
         return ResponseResult.okResult("上传文件成功");
     }
 
+    @Autowired
+    private CollectionImgService collectionImgService;
+
+    @PostMapping("/upload/collect/img")
+    public ResponseResult upload2(MultipartFile file, @RequestParam Integer id) {
+        CollectionImg collectionImg = new CollectionImg();
+        HashMap map = qiniuService.saveImage(file);
+        String key = (String) map.get("key");
+        String url = (String) map.get("url");
+        collectionImg.setUrl(url);
+        collectionImg.setKk(key);
+        collectionImg.setBelongId(id);
+        collectionImgService.save(collectionImg);
+        return ResponseResult.okResult("上传成功");
+    }
+
+    @GetMapping("/get/collection/{id}")
+    public ResponseResult getCollectionImgs(@PathVariable Integer id) {
+        LambdaQueryWrapper<CollectionImg> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(CollectionImg::getBelongId, id);
+        List<CollectionImg> list = collectionImgService.list(queryWrapper);
+        return ResponseResult.okResult(list);
+    }
 
     /**
      * 返回所需文件的所有下载信息
@@ -193,6 +217,8 @@ public class AppController {
         task.setItemsInCarDes(dto.getItemsInCarDes());
         task.setGetCarTime(DateUtil.now());
         task.setCarSituation("已收车");
+        task.setLatitude(dto.getLatitude());
+        task.setLongitude(dto.getLongitude());
         task.setGetCarGroup(user.getBelongGroup());
         task.setHasInbox(1);
         taskDetailService.updateById(task);
@@ -281,6 +307,15 @@ public class AppController {
                 LambdaQueryWrapper<ManageDetail> queryWrapper = new LambdaQueryWrapper<>();
                 queryWrapper.eq(ManageDetail::getTaskId, taskId).eq(ManageDetail::getIsClear, 2);
                 manageDetailService.remove(queryWrapper);
+                break;
+            case 4:
+                LambdaQueryWrapper<SubTime> queryWrapper1 = new LambdaQueryWrapper<>();
+                queryWrapper1.eq(SubTime::getType, 3).eq(SubTime::getTaskId, dto.getTaskId());
+                SubTime subtime = subTimeService.getOne(queryWrapper1);
+                subtime.setType(4);
+                subtime.setRejectText(dto.getText());
+                subTimeService.updateById(subtime);
+                task.setIsRemarkFifth(4);
                 break;
         }
         List<String> files = new ArrayList<>();
@@ -378,7 +413,18 @@ public class AppController {
         record.setText(dto.getText());
         record.setTaskId(dto.getTaskId());
         recordService.save(record);
-        return ResponseResult.okResult("新增催收记录成功！");
+        HashMap map = new HashMap();
+        map.put("id", record.getId());
+        return ResponseResult.okResult(map);
+    }
+
+    @PostMapping("/add/position")
+    public ResponseResult addPosition(@RequestBody PositionDto dto) {
+        TaskDetail task = taskDetailService.getById(dto.getTaskId());
+        task.setLatitude(dto.getLatitude());
+        task.setLongitude(dto.getLongitude());
+        taskDetailService.updateById(task);
+        return ResponseResult.okResult("上传成功");
     }
 
     @PostMapping("/change")
@@ -476,6 +522,7 @@ public class AppController {
                 queryWrapper.eq(ManageDetail::getIsClear, 2);
                 manageDetailService.updateById(manageDetail);
                 break;
+
         }
         task.setUpdateTime(DateUtil.now());
         taskDetailService.updateById(task);
@@ -779,4 +826,95 @@ public class AppController {
         }
     }
 
+    @Autowired
+    private SubTimeService subTimeService;
+
+    @PostMapping("/sub/add/time")
+    public ResponseResult subAddTime(@RequestBody addTimeDto dto) {
+        LambdaQueryWrapper<SubTime> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(SubTime::getIsNew, 1).eq(SubTime::getTaskId, dto.getTaskId());
+        List<SubTime> list = subTimeService.list(queryWrapper);
+        if (!list.isEmpty()) {
+            for (SubTime st : list) {
+                st.setIsNew(0);
+            }
+            subTimeService.updateBatchById(list);
+        }
+        SubTime subTime = new SubTime();
+        TaskDetail task = taskDetailService.getById(dto.getTaskId());
+        User user = userService.getById(dto.getUserId());
+        subTime.setSubTime(DateUtil.now());
+        subTime.setIsNew(1);
+        subTime.setType(3);
+        subTime.setText(dto.getText());
+        subTime.setSubUser(user.getNickname());
+        subTime.setTaskId(dto.getTaskId());
+        task.setIsRemarkFifth(3);
+        subTimeService.save(subTime);
+        taskDetailService.updateById(task);
+        send();
+        return ResponseResult.okResult("提交变更时间申请成功");
+    }
+
+    @PostMapping("/add/time")
+    public ResponseResult addTime(@RequestBody addTimeRealDto dto) {
+        TaskDetail task = taskDetailService.getById(dto.getTaskId());
+        User user = userService.getById(dto.getUserId());
+        if (dto.getSubTimeId() != -1) {
+            SubTime subTime = subTimeService.getById(dto.getSubTimeId());
+            subTime.setPassUser(user.getNickname());
+            subTime.setPassTime(DateUtil.now());
+            subTime.setBeforeTime(task.getCountTime());
+            subTime.setNowTime(dto.getDay());
+            subTime.setIsNew(0);
+            subTime.setType(1);
+            subTimeService.updateById(subTime);
+            task.setCountTime(dto.getDay());
+            task.setIsRemarkFifth(1);
+            taskDetailService.updateById(task);
+            return ResponseResult.okResult("更改时间成功");
+        } else {
+            SubTime subTime = new SubTime();
+            subTime.setPassTime(DateUtil.now());
+            subTime.setPassUser(user.getNickname());
+            subTime.setBeforeTime(task.getCountTime());
+            subTime.setNowTime(dto.getDay());
+            subTime.setType(1);
+            subTime.setTaskId(dto.getTaskId());
+            subTime.setIsNew(0);
+            subTimeService.save(subTime);
+            task.setCountTime(dto.getDay());
+            taskDetailService.updateById(task);
+            return ResponseResult.okResult("更改时间成功");
+        }
+    }
+
+    //列出某辆车的改时间记录  isnew==1最新的
+    @GetMapping("/list/add/record/{id}")
+    public ResponseResult listAddRecords(@PathVariable Integer id) {
+        LambdaQueryWrapper<SubTime> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(SubTime::getTaskId, id);
+        List<SubTime> list = subTimeService.list(queryWrapper);
+        return ResponseResult.okResult(list);
+    }
+
+    @PostMapping("/change/msg")
+    public ResponseResult changeMsg(@RequestBody ChangeMsgDto dto) {
+        TaskDetail taskDetail = taskDetailService.getById(dto.getTaskId());
+        taskDetail.setCarOwnerPhone(dto.getCarOwnerPhone());
+        taskDetail.setCarAttribute(dto.getCarAttribute());
+        taskDetail.setOrderId(dto.getOrderId());
+        taskDetail.setContractId(dto.getContractId());
+        taskDetail.setPrincipal(dto.getPrincipal());
+        taskDetailService.updateById(taskDetail);
+        return ResponseResult.okResult("修改成功");
+    }
+
+    @GetMapping("/remove/material/{id}")
+    public ResponseResult removeMaterial(@PathVariable Integer id) {
+        Materials byId = materialsService.getById(id);
+        qiniuService.deleteImg(byId.getImgK());
+        materialsService.removeById(id);
+        return ResponseResult.okResult("删除成功");
+    }
 }
