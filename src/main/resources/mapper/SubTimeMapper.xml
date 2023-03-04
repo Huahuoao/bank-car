@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.huahuo.huahuobank.mapper.SubTimeMapper">
+
+    <resultMap id="BaseResultMap" type="com.huahuo.huahuobank.pojo.SubTime">
+            <id property="id" column="id" jdbcType="INTEGER"/>
+            <result property="subUser" column="sub_user" jdbcType="VARCHAR"/>
+            <result property="passUser" column="pass_user" jdbcType="VARCHAR"/>
+            <result property="subTime" column="sub_time" jdbcType="DATE"/>
+            <result property="passTime" column="pass_time" jdbcType="DATE"/>
+            <result property="beforeTime" column="before_time" jdbcType="INTEGER"/>
+            <result property="nowTime" column="now_time" jdbcType="INTEGER"/>
+            <result property="text" column="text" jdbcType="VARCHAR"/>
+            <result property="type" column="type" jdbcType="INTEGER"/>
+            <result property="taskId" column="task_id" jdbcType="INTEGER"/>
+            <result property="rejectText" column="reject_text" jdbcType="VARCHAR"/>
+            <result property="isNew" column="is_new" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,sub_user,pass_user,
+        sub_time,pass_time,before_time,
+        now_time,text,type,
+        task_id,reject_text,is_new
+    </sql>
+</mapper>
