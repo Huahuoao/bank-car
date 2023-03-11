@@ -462,7 +462,6 @@ public class AppController {
                 task.setFirstPassTime(DateUtil.now());
                 task.setFirstPassUser(user.getNickname());
                 task.setGpsSituation("已贴G");
-                task.setGpsSituationTwo("在线");
                 break;
             case 2:
                 task.setIsRemarkOne(1);
@@ -472,7 +471,7 @@ public class AppController {
                 task.setSecondPassTime(DateUtil.now());
                 task.setSecondPassUser(user.getNickname());
                 task.setGpsSituation("已贴G");
-                task.setGpsSituationTwo("在线");
+                task.setGpsSituationTwo("离线");
                 break;
             case 3:
                 task.setIsRemarkThree(1);
@@ -722,16 +721,22 @@ public class AppController {
     @PostMapping("/change/group/2")
     public ResponseResult changeBatchGroup(@RequestBody ChangeGroupTwoDto dto) {
         Integer[] ids = dto.getIds();
-
         LambdaQueryWrapper<TaskDetail> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.in(TaskDetail::getId, ids);
         List<TaskDetail> tasks = taskDetailService.list(queryWrapper);
+        log.info("1====>>>" + tasks.toString());
         for (TaskDetail taskDetail : tasks) {
             if (taskDetail.getIsRemarkOne() == 4 || taskDetail.getIsRemarkTwo() == 4) {
                 //删除record
                 LambdaQueryWrapper<Record> queryWrapper2 = new LambdaQueryWrapper<>();
                 queryWrapper2.eq(Record::getTaskId, taskDetail.getId());
                 recordService.remove(queryWrapper2);
+                LambdaQueryWrapper<Materials> queryWrapper3 = new LambdaQueryWrapper<>();
+                queryWrapper3.eq(Materials::getTaskId, taskDetail.getId());
+                queryWrapper3.in(Materials::getType, 1, 2);
+                materialsService.remove(queryWrapper3);
+                log.info("task====>" + taskDetail);
+                taskDetail.setProcessSituation("未提交");
                 taskDetail.setIsRemarkOne(0);
                 taskDetail.setIsRemarkTwo(1);
             }
@@ -740,13 +745,13 @@ public class AppController {
                 //materials
                 taskDetail.setIsRemarkOne(0);
                 taskDetail.setIsRemarkTwo(1);
+                taskDetail.setProcessSituation("未提交");
                 LambdaQueryWrapper<Materials> queryWrapper3 = new LambdaQueryWrapper<>();
                 queryWrapper3.eq(Materials::getTaskId, taskDetail.getId());
                 queryWrapper3.in(Materials::getType, 1, 2);
                 materialsService.remove(queryWrapper3);
             }
         }
-        List<TaskDetail> list = taskDetailService.list(queryWrapper);
         List<Hgroups> groups = groupsService.list();
         boolean has = false;
         for (Hgroups group : groups) {
@@ -758,10 +763,10 @@ public class AppController {
         if (!has) {
             return ResponseResult.errorResult("队伍不存在");
         }
-        for (TaskDetail taskDetail : list) {
+        for (TaskDetail taskDetail : tasks) {
             taskDetail.setTaskGroup(dto.getName());
         }
-        taskDetailService.updateBatchById(list);
+        taskDetailService.updateBatchById(tasks);
         return ResponseResult.okResult("更改队伍成功,队伍更改为" + dto.getName());
     }
 
@@ -850,6 +855,7 @@ public class AppController {
         subTime.setSubUser(user.getNickname());
         subTime.setTaskId(dto.getTaskId());
         task.setIsRemarkFifth(3);
+        task.setUpdateTime(DateUtil.now());
         subTimeService.save(subTime);
         taskDetailService.updateById(task);
         send();
@@ -860,6 +866,46 @@ public class AppController {
     public ResponseResult addTime(@RequestBody addTimeRealDto dto) {
         TaskDetail task = taskDetailService.getById(dto.getTaskId());
         User user = userService.getById(dto.getUserId());
+        if (dto.getDay() == 0) {
+            SubTime subTime = subTimeService.getById(dto.getSubTimeId());
+            if (subTime != null) {
+                subTime.setPassUser(user.getNickname());
+                subTime.setPassTime(DateUtil.now());
+                subTime.setBeforeTime(task.getCountTime());
+                subTime.setNowTime(dto.getDay());
+                subTime.setIsNew(0);
+                subTime.setType(1);
+                subTimeService.updateById(subTime);
+            }
+            task.setCountTime(dto.getDay());
+            task.setIsRemarkFifth(1);
+            //
+            task.setUpdateTime(DateUtil.now());
+            task.setIsRemarkOne(0);
+            task.setFirstPassTime(null);
+            task.setFirstPassUser(null);
+            task.setCountTime(60);
+            task.setFirstSubTime(null);
+            task.setFirstSubUser(null);
+            task.setGpsSituation("未贴G");
+            LambdaQueryWrapper<Materials> queryWrapper1 = new LambdaQueryWrapper<>();
+            queryWrapper1.eq(Materials::getTaskId, task.getId()).eq(Materials::getType, 1);
+            List<Materials> list1 = materialsService.list(queryWrapper1);
+            if (!list1.isEmpty())
+                for (Materials materials : list1) {
+                    qiniuService.deleteImg(materials.getImgK());
+                    materialsService.removeById(materials);
+                }
+            LambdaQueryWrapper<Record> queryWrapper2 = new LambdaQueryWrapper<>();
+            queryWrapper2.eq(Record::getTaskId, task.getId());
+            recordService.remove(queryWrapper2);
+            LambdaQueryWrapper<SubTime> queryWrapper3 = new LambdaQueryWrapper<>();
+            queryWrapper3.eq(SubTime::getTaskId, task.getId());
+            subTimeService.remove(queryWrapper3);
+            taskDetailService.updateById(task);
+            return ResponseResult.okResult("修改状态成功");
+            //
+        }
         if (dto.getSubTimeId() != -1) {
             SubTime subTime = subTimeService.getById(dto.getSubTimeId());
             subTime.setPassUser(user.getNickname());
@@ -868,8 +914,10 @@ public class AppController {
             subTime.setNowTime(dto.getDay());
             subTime.setIsNew(0);
             subTime.setType(1);
+
             subTimeService.updateById(subTime);
             task.setCountTime(dto.getDay());
+            task.setUpdateTime(DateUtil.now());
             task.setIsRemarkFifth(1);
             taskDetailService.updateById(task);
             return ResponseResult.okResult("更改时间成功");
@@ -883,6 +931,7 @@ public class AppController {
             subTime.setTaskId(dto.getTaskId());
             subTime.setIsNew(0);
             subTimeService.save(subTime);
+            task.setUpdateTime(DateUtil.now());
             task.setCountTime(dto.getDay());
             taskDetailService.updateById(task);
             return ResponseResult.okResult("更改时间成功");
@@ -916,5 +965,11 @@ public class AppController {
         qiniuService.deleteImg(byId.getImgK());
         materialsService.removeById(id);
         return ResponseResult.okResult("删除成功");
+    }
+
+    @PostMapping("/remove/task/batch")
+    public ResponseResult removeTaskBatch(@RequestBody IdDto dto) {
+        taskDetailService.removeByIds(dto.getIds());
+        return ResponseResult.okResult("批量删除任务成功");
     }
 }

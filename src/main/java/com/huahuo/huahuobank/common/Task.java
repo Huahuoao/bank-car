@@ -38,6 +38,7 @@ public class Task {
     @Autowired //"0 0 1 * * ?"
     SubTimeService subTimeService;
 
+
     @Scheduled(cron = "0 0 1 * * ?")   //每天零点开始
     public void execute() {
         Integer day = 1;
@@ -60,7 +61,6 @@ public class Task {
                 taskDetail.setFirstSubTime(null);
                 taskDetail.setFirstSubUser(null);
                 taskDetail.setGpsSituation("未贴G");
-                taskDetail.setGpsSituationTwo("GPS失效");
                 LambdaQueryWrapper<Materials> queryWrapper1 = new LambdaQueryWrapper<>();
                 queryWrapper1.eq(Materials::getTaskId, taskDetail.getId()).eq(Materials::getType, 1);
                 List<Materials> list1 = materialsService.list(queryWrapper1);

@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -40,6 +41,7 @@ public class ExcelController {
     TaskDetailService taskDetailService;
     @Autowired
     TaskDetailMapper taskDetailMapper;
+
 
     @Autowired
     TaskService taskService;
@@ -57,18 +59,31 @@ public class ExcelController {
                 .head(Task.class)
                 .sheet()
                 .doReadSync();
-LambdaQueryWrapper<TaskDetail> queryWrapper = new LambdaQueryWrapper<>();
-
+        LambdaQueryWrapper<TaskDetail> queryWrapper = new LambdaQueryWrapper<>();
+        ArrayList<String> taskListTrue = new ArrayList<>();
+        //先获取一个全是车牌的list
         for (Task task : taskList) {
-            queryWrapper.eq(TaskDetail::getCarPlate,task.getCarPlate());
-            if(taskDetailService.getOne(queryWrapper)!=null)
-                return ResponseResult.okResult(300,"重复数据");
-            if(StringUtils.isBlank(task.getCarPlate())) continue;
+            taskListTrue.add(task.getCarPlate());
+        }
+        queryWrapper.in(TaskDetail::getCarPlate, taskListTrue);
+        //查找有没有相同的
+        List<TaskDetail> list = taskDetailService.list(queryWrapper);
+        //如果有就处理掉
+        if (!list.isEmpty()) {
+            List<String> realList = new ArrayList<>();
+            for (TaskDetail taskDetail : list) {
+                realList.add(taskDetail.getCarPlate());
+            }
+            return ResponseResult.errorResult(realList);
+        }
+//没有就正常加
+        for (Task task : taskList) {
+            if (StringUtils.isBlank(task.getCarPlate())) continue;
             TaskDetail taskDetail = new TaskDetail();
-            if(task.getPrincipal()!=null)
-            task.setPrincipal(format(task.getPrincipal()));
-            if(task.getEvaluation()!=null)
-            task.setEvaluation(format(task.getEvaluation()));
+            if (task.getPrincipal() != null)
+                task.setPrincipal(format(task.getPrincipal()));
+            if (task.getEvaluation() != null)
+                task.setEvaluation(format(task.getEvaluation()));
             taskDetail.setCarPlate("123");
             taskDetailService.save(taskDetail);
             taskDetail.setCarPlate(null);
@@ -91,20 +106,20 @@ LambdaQueryWrapper<TaskDetail> queryWrapper = new LambdaQueryWrapper<>();
                 .head(Task.class)
                 .sheet()
                 .doReadSync();
-         int sum = 0;
+        int sum = 0;
         for (Task task : taskList) {
-            if(StringUtils.isBlank(task.getCarPlate())) continue;
-       //     log.info("task=="+task.toString());
+            if (StringUtils.isBlank(task.getCarPlate())) continue;
+            //     log.info("task=="+task.toString());
             LambdaQueryWrapper<TaskDetail> queryWrapper = new LambdaQueryWrapper<>();
-            queryWrapper.eq(TaskDetail::getCarPlate,task.getCarPlate());
+            queryWrapper.eq(TaskDetail::getCarPlate, task.getCarPlate());
             TaskDetail taskDetail = taskDetailService.getOne(queryWrapper);
-            if(task.getTaskGroup()!=null) log.info(task.getTaskGroup());
+            if (task.getTaskGroup() != null) log.info(task.getTaskGroup());
             taskDetail.setTaskGroup(task.getTaskGroup());
             taskDetail.setCreateTime(task.getCreateTime());
             taskDetailService.updateById(taskDetail);
             sum++;
         }
-log.info("sum="+sum);
+        log.info("sum=" + sum);
         return ResponseResult.okResult("更新任务成功！");
     }
 
