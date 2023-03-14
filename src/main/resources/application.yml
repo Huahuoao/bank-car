@@ -1,9 +1,9 @@
 server:
-  port: 51608
+  port: xxxxxxx
 
   ssl:
-    key-store: classpath:server.jks
-    key-store-password: 3fsh8f6kts
+    key-store: xxxxx
+    key-store-password: xxxxxx
     key-store-type: JKS
 
 spring:
@@ -21,9 +21,9 @@ spring:
   datasource:
     druid:
       driver-class-name: com.mysql.cj.jdbc.Driver
-      url: jdbc:mysql://tycloud.fzuhuahuo.cn:3306/huahuo_car?serverTimezone=Asia/Shanghai&useSSL=false&useUnicode=true&characterEncoding=UTF8
-      username: root
-      password: RaguwwC9KZufTfU
+      url: xxxxxx
+      username: xxxxx
+      password: xxxxx
 
 #
 #  redis:
