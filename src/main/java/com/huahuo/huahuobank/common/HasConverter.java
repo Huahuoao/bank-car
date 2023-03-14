@@ -33,6 +33,8 @@ public class HasConverter implements Converter<Integer> {
             return 0;
         } else if ("有".equals(cellStr)) {
             return 1;
+        }  else if ("不详".equals(cellStr)) {
+            return 2;
         } else {
             return null;
         }
@@ -49,6 +51,8 @@ public class HasConverter implements Converter<Integer> {
             return new WriteCellData<>("无");
         } else if (cellValue == 1) {
             return new WriteCellData<>("有");
+        } else if (cellValue == 2) {
+            return new WriteCellData<>("不详");
         } else {
             return new WriteCellData<>("");
         }
